@@ -1,0 +1,7 @@
+*.swp
+*~
+Makefile
+test_run_dir/
+target/
+verilog/
+project/
