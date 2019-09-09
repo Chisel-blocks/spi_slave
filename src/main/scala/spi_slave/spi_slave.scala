@@ -15,13 +15,14 @@ class spi_slave(val cfg_length : Int = 8) extends Module {
 
     val spi_enabled = !io.cs.toBool
 
-    withClock(io.inv_sclk){
-      val state = Reg(UInt(cfg_length.W))
-      val nextState = (state << 1) | io.mosi
-      when (spi_enabled) {
+    val state = withClock(io.inv_sclk){ 
+        Reg(UInt(cfg_length.W))
+    }
+    val nextState = (state << 1) | io.mosi
+    when (spi_enabled) {
           state := nextState
       }
-    }
+    
 
     io.config_out := state
     when (spi_enabled) { 
