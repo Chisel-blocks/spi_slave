@@ -25,24 +25,25 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     val shiftingConfig = withClock(inv_sclk){ Reg(UInt(cfg_length.W)) }
     val stateConfig = Reg(UInt(cfg_length.W))
     val shiftingMonitor = withClock(inv_sclk){ Reg(UInt(mon_length.W)) }
-    val misoPosEdgeBuffer = Reg(UInt(1.W))
+    val misoPosEdgeBuffer = withClock(io.sclk){ Reg(UInt(1.W)) }
     
     // "shifting" assignmentks
     val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
     val nextShiftingMonitor = (shiftingMonitor << 1) | shiftingConfig(cfg_length-1)
 
+    misoPosEdgeBuffer := shiftingMonitor(mon_length-1)
+
     // upon CS line being low
     when (spi_enabled) {
       shiftingConfig := nextShiftingConfig
       shiftingMonitor := nextShiftingMonitor
-      misoPosEdgeBuffer := shiftingMonitor(mon_length-1)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
       io.miso := 0.U
     }
 
     // first cycle of internal clock after CS rises again
-    when (risingEdge(!spi_enabled)){
+    when (risingEdge(io.cs.toBool)){
       stateConfig := shiftingConfig
       shiftingMonitor := io.monitor_in
     }
