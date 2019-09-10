@@ -9,23 +9,36 @@ class spi_slave(val cfg_length : Int = 8, val monitor_length : Int =8) extends M
       val mosi = Input(UInt(1.W))
       val cs   = Input(UInt(1.W))
       val miso = Output(UInt(1.W))
-      val config_out = Output(Vec(cfg_length,UInt(1.W)))
-      val monitor_in = Input(Vec(monitor_length,UInt(1.W)))
+      val config_out = Output(UInt(cfg_length.W))
+      val monitor_in = Input(UInt(monitor_length.W))
     })
 
     val spi_enabled = !io.cs.toBool
     val inv_sclk = (!clock.asUInt.toBool).asClock()
 
-    val serial_register = Reg(Vec(io.config_out.length+io.monitor_in.length,UInt(1.W)))
+    val serial_register = withClock(inv_sclk){Reg(Vec(io.config_out.getWidth+io.monitor_in.getWidth,UInt(1.W)))}
     val config_out_reg =  Reg(Vec(cfg_length,UInt(1.W)))
     val monitor_in_reg =  Reg(Vec(cfg_length,UInt(1.W)))
         
     // Check the endianness
-    for ( i <- 0 until config_out_reg.length) {
-        config_out_reg(i) := serial_register(i)
+    when ( spi_enabled === 1.U) {
+        serial_register(0):=io.mosi
+        for ( i <- 1 until serial_register.length ) {
+            serial_register(i):=serial_register(i-1)
+        }
+    }.otherwise {
+        for ( i <- 0 until config_out_reg.getWidth ) {
+            config_out_reg(i) := serial_register(i)
+        }
+
+        //Requires condition
+        for ( i <- 0 until monitor_in_reg.getWidth ) {
+            serial_register(config_out_reg.getWidth+i) := monitor_in_reg(i).asUInt()
+        }
     }
+
     // Define assingment conditions
-    io.config_out:=config_out_reg
+    io.config_out:=config_out_reg.asUInt()
 
     
     when (spi_enabled) { 
