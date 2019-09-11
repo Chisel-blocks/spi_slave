@@ -31,12 +31,11 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
     val nextShiftingMonitor = (shiftingMonitor << 1) | shiftingConfig(cfg_length-1)
 
-    misoPosEdgeBuffer := shiftingMonitor(mon_length-1)
-
     // upon CS line being low
     when (spi_enabled) {
       shiftingConfig := nextShiftingConfig
       shiftingMonitor := nextShiftingMonitor
+      misoPosEdgeBuffer := shiftingMonitor(mon_length-1)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
       io.miso := 0.U
@@ -48,8 +47,6 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
       shiftingMonitor := io.monitor_in
     }
 
-    //TODO put here some stuffff
-
     // provide a snapshot of Config register to the chip
     io.config_out := stateConfig
 }
@@ -59,24 +56,6 @@ object spi_slave extends App {
 }
 
 class unit_tester(c: spi_slave) extends PeekPokeTester(c) {
-  
-    // tests that the mosi passes through the register not sooner than full cycle
-    poke(c.io.mosi, 1)
-    poke(c.io.cs, 1)
-    for (i <- 0 to 2){
-      step(1)
-      expect(c.io.miso, 0)
-    }
-
-    poke(c.io.cs, 0)
-    for (i <- 1 to 7){
-      step(1)
-      expect(c.io.miso, 0)
-    }
-    step(1)
-    expect(c.io.miso, 1)
-    step(1)
-    expect(c.io.miso, 1)
 }
 
 object unit_test extends App {

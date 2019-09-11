@@ -57,26 +57,34 @@ BEGIN
     config_value<="01010101";
     monitor_register<="11100011";
     WAIT FOR SClkPeriod;
+
     rst <= '0';
     WAIT FOR SClkPeriod;
+
     cs<='0';
     WAIT FOR size*SClkPeriod;
+
     cs<= '1';
     monitor_register<="01010101";
     config_value<="10000001";
     monitor_register<="11100011";
     WAIT FOR SClkPeriod;
+
     cs<= '0';
     --mode_select<='1';
     wait for size*SClkPeriod;
+
     cs<='1';
     config_value<="10011001";
     monitor_register<="11110000";
     WAIT FOR SClkPeriod;
+
     cs<= '0';
     WAIT FOR size*SClkPeriod;
+
     cs<='1';
     WAIT FOR size*SClkPeriod;
+
     DONE<=TRUE;
     WAIT;
 END PROCESS;
@@ -116,7 +124,7 @@ DUT : ENTITY work.spi_slave
 		io_config_out       => config_register,
 		io_monitor_in       => monitor_register,
 		clock               => mclk,
-        reset               => '1'
+        reset               => rst
 		);
 END ARCHITECTURE;
 
