@@ -48,6 +48,8 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
       shiftingMonitor := io.monitor_in
     }
 
+    //TODO put here some stuffff
+
     // provide a snapshot of Config register to the chip
     io.config_out := stateConfig
 }
