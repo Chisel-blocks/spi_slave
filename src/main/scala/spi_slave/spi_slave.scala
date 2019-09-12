@@ -20,6 +20,8 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     //val inv_sclk = (!clock.asUInt.toBool).asClock()
     val inv_sclk = (!io.sclk.asUInt.toBool).asClock()
 
+    // Here' my two cents
+    //
     // SPI registers
     val shiftingConfig = withClock(inv_sclk){ Reg(UInt(cfg_length.W)) }
     val stateConfig = Reg(UInt(cfg_length.W))
