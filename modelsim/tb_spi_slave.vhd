@@ -29,8 +29,23 @@ SIGNAL DONE :BOOLEAN:=FALSE;
 --signal observation_register_before_shifting : std_logic_vector((size_config+size_monitor-1) downto 0);
 --signal observation_register_after_shifting : std_logic_vector((size_config+size_monitor-1) downto 0);
 
+--for using in assert statements
+signal spi_word_in : std_logic_vector(size-1 downto 0);
+signal spi_word_in_old : std_logic_vector(size-1 downto 0);
+signal spi_word_out : std_logic_vector(size-1 downto 0) := (others => '0');
+
+procedure check_inout is
+begin
+    assert spi_word_in_old = spi_word_out report 
+    " !!! WORDS DON'T MATCH !!!" & LF & 
+    " Expected: " & to_string(spi_word_in_old) & LF & 
+    " Got     : " & to_string(spi_word_out) 
+    severity warning;
+end procedure;
+
 BEGIN
 monitor_dummy<=(OTHERS=>'0');
+spi_word_in <= config_value & monitor_register;
 
 psclk:PROCESS
 BEGIN
@@ -65,7 +80,8 @@ BEGIN
     WAIT FOR size*SClkPeriod;
 
     cs<= '1';
-    monitor_register<="01010101";
+    spi_word_in_old <= spi_word_in;
+    --monitor_register<="01010101";
     config_value<="10000001";
     monitor_register<="11100011";
     WAIT FOR SClkPeriod;
@@ -75,6 +91,8 @@ BEGIN
     wait for size*SClkPeriod;
 
     cs<='1';
+    check_inout;
+    spi_word_in_old <= spi_word_in;
     config_value<="10011001";
     monitor_register<="11110000";
     WAIT FOR SClkPeriod;
@@ -83,6 +101,8 @@ BEGIN
     WAIT FOR size*SClkPeriod;
 
     cs<='1';
+    check_inout;
+    spi_word_in_old <= spi_word_in;
     WAIT FOR size*SClkPeriod;
 
     DONE<=TRUE;
@@ -110,6 +130,19 @@ IF (NOT DONE) THEN
 END IF;
 END PROCESS;
 
+out_sampler : process(sclk,miso,cs)
+   variable v_count: integer:=0;
+begin
+    if(not DONE) then
+        if cs='1' then
+           v_count := 0;
+        end if;
+        if (falling_edge(sclk)) then
+            spi_word_out(v_count)<=miso;
+            v_count := v_count+1;
+        end if;
+    end if;
+end process;
 		
 DUT : ENTITY work.spi_slave
 	--GENERIC MAP(
