@@ -1,0 +1,3 @@
+[submodule "async_set_register"]
+	path = async_set_register
+	url = git@bubba.ecdl.hut.fi:Chisel-blocks/async_set_register.git
