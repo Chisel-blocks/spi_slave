@@ -45,10 +45,11 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
       misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
-
-    // first cycle of internal clock after CS rises again
-    when (risingEdge(io.cs.toBool)){
-      stateConfig := shiftingConfig
+        // first cycle of internal clock after CS rises again
+        when (risingEdge(io.cs.toBool)){
+          stateConfig := shiftingConfig
+        }
+        io.miso:=0.U(1.W)
     }
 
     // provide a snapshot of shifting Config register to the chip
@@ -107,7 +108,7 @@ object spi_slave extends App {
     chisel3.Driver.execute(arguments.toArray, () => 
             new spi_slave(
                 cfg_length=options("cfg_length").toInt, 
-                monitor_length=options("mon_length").toInt
+                mon_length=options("mon_length").toInt
             )
     )
 }
