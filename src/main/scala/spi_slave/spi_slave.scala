@@ -45,8 +45,6 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
       misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
-      io.miso := 0.U
-    }
 
     // first cycle of internal clock after CS rises again
     when (risingEdge(io.cs.toBool)){
@@ -57,8 +55,61 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     io.config_out := stateConfig
 }
 
+
+//This is the object to provide verilog
 object spi_slave extends App {
-    chisel3.Driver.execute(args, () => new spi_slave)
+    // Getopts parses the "Command line arguments for you"  
+    def getopts(options : Map[String,String], 
+        arguments: List[String]) : (Map[String,String], List[String]) = {
+        //This the help
+        val usage = """
+            |Usage: spi_slave.spi_slave [-<option>]
+            |
+            | Options
+            |     cfg_length       [Int]     : Number of bits in the config register. Default 8
+            |     mon_length       [Int]     : Number of bits in the monitor register. Default 8
+            |     h                          : This help 
+          """.stripMargin
+        val optsWithArg: List[String]=List(
+            "-cfg_length",
+            "-mon_length"
+        )
+        //Handling of flag-like options to be defined 
+        arguments match {
+            case "-h" :: tail => {
+                println(usage)
+                val (newopts, newargs) = getopts(options, tail)
+                sys.exit
+                (Map("h"->"") ++ newopts, newargs)
+            }
+            case option :: value :: tail if optsWithArg contains option => {
+               val (newopts, newargs) = getopts(
+                   options++Map(option.replace("-","") -> value), tail
+               )
+               (newopts, newargs)
+            }
+              case argument :: tail => {
+                 val (newopts, newargs) = getopts(options,tail)
+                 (newopts, argument.toString +: newargs)
+              }
+            case Nil => (options, arguments)
+        }
+    }
+     
+    // Default options
+    val defaultoptions : Map[String,String]=Map(
+        "cfg_length"->"8",
+        "mon_length"->"8"
+        ) 
+    // Parse the options
+    val (options,arguments)= getopts(defaultoptions,args.toList)
+  
+    chisel3.Driver.execute(arguments.toArray, () => 
+            new spi_slave(
+                cfg_length=options("cfg_length").toInt, 
+                monitor_length=options("mon_length").toInt
+            )
+    )
 }
 
 class unit_tester(c: spi_slave) extends PeekPokeTester(c) {

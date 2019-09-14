@@ -4,7 +4,7 @@
 # The purpose is to control the compilation and testing
 # in parametrized manner from this single file
 # Created by Marko Kosunen on 24.03.2015
-# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.12.2018 20:27
+# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 14.09.2019 14:27
 #############################################################################
 ##Function to display help with -h argument and to control 
 ##The configuration from the commnad line
@@ -64,6 +64,13 @@ TEST_TARGETS = \$(foreach name,\$(MODULES), test_\$(name))
 #Commands
 SBT=sbt -J-Xmx16G -J-Xss8M
 
+# Default parameters
+cfg_length ?= 8
+mon_length ?= 8
+
+MAINPARAMS = -cfg_length \$(cfg_length) \\
+             -mon_length \$(monitor_length)
+
 TOUCH=touch -r
 `for i in ${VPATHDIRS}; do
     echo vpath %.scala \\$\(SCALAPATH\)/$i
@@ -71,7 +78,7 @@ done`
 .PHONY: all help clean \$(MODULES)
 
 
-all: \$(TARGETS) \$(TEST_TARGETS)
+all: clean \$(TARGETS) \$(TEST_TARGETS)
 
 
 #Recipes for individual modules
@@ -90,14 +97,15 @@ done`
 #Template for conditional makes
 #Figure out the naming conventions later. Package is lowercase, class equals main method
 #Does not track dependencies from scala source
+
 \$(VERILOGPATH)/%.v : %.scala  
 	\$(eval package:=\$(basename \$(notdir \$@)))
 	\$(eval class:=\$(basename \$(notdir \$@)))
 	\$(eval testbenchfile:=\$(dir \$<)tb_\$(notdir \$<))
-	\$(SBT) 'runMain \$(package).\$(class) -td \$(VERILOGPATH)' 
+	\$(SBT) 'runMain \$(package).\$(class) \$(MAINPARAMS) -td \$(VERILOGPATH)' 
 	@#Test if testbech generator exists and compile it
 	@if [ -f \$(testbenchfile) ]; then \\
-		\$(SBT) 'runMain \$(package).tb_\$(class) -td \$(VERILOGPATH)'; \\
+	\$(SBT) 'runMain \$(package).tb_\$(class) \$(MAINPARAMS) -td \$(VERILOGPATH)'; \\
 	fi
 clean:
 	rm -f \$(VERILOGPATH)/*.v
