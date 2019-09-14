@@ -4,7 +4,7 @@
 # The purpose is to control the compilation and testing
 # in parametrized manner from this single file
 # Created by Marko Kosunen on 24.03.2015
-# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 14.09.2019 14:27
+# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 14.09.2019 14:29
 #############################################################################
 ##Function to display help with -h argument and to control 
 ##The configuration from the commnad line
@@ -69,7 +69,7 @@ cfg_length ?= 8
 mon_length ?= 8
 
 MAINPARAMS = -cfg_length \$(cfg_length) \\
-             -mon_length \$(monitor_length)
+             -mon_length \$(mon_length)
 
 TOUCH=touch -r
 `for i in ${VPATHDIRS}; do
