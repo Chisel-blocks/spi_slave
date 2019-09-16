@@ -3,7 +3,8 @@ package spi_slave
 import chisel3._
 import chisel3.util._
 import chisel3.iotesters.{PeekPokeTester, Driver}
-import chisel3.experimental.{withClock, withReset, withClockAndReset}
+import chisel3.experimental.{withClock}
+import async_set_register._
 
 class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Module {
     val io = IO(new Bundle{
@@ -30,8 +31,13 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
 
     // TODO this guy has to have an asynchronous reset!
     // TODO ... and clocked with a falling edge of sclk
-    val spiFirstCycle = withReset(io.cs.toBool){ RegInit(1.U(1.W)) }
-    spiFirstCycle := 0.U
+    //
+    val spiFirstCycle = Wire(UInt(1.W))
+    val asyncRegister = Module(new async_set_register(n=1)).io
+    asyncRegister.D := 0.U
+    spiFirstCycle := asyncRegister.Q
+    asyncRegister.clock := inv_sclk
+    asyncRegister.set := io.cs.toBool
     
     // pre-shifted vectors for register assignment 
     val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
