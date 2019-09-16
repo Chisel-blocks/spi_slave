@@ -27,6 +27,9 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     val stateConfig = Reg(UInt(cfg_length.W))
     val shiftingMonitor = withClock(inv_sclk){ Reg(UInt(mon_length.W)) }
     val misoPosEdgeBuffer = withClock(io.sclk){ Reg(UInt(1.W)) }
+
+    // TODO this guy has to have an asynchronous reset!
+    // TODO ... and clocked with a falling edge of sclk
     val spiFirstCycle = withReset(io.cs.toBool){ RegInit(1.U(1.W)) }
     spiFirstCycle := 0.U
     
