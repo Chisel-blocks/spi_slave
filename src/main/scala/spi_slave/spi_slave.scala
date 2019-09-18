@@ -24,8 +24,8 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     // Here' my two cents
     //
     // SPI registers
-    val shiftingConfig = withClock(inv_sclk){ Reg(UInt(cfg_length.W)) }
-    val stateConfig = Reg(UInt(cfg_length.W))
+    val shiftingConfig = withClock(inv_sclk){ Reg(UInt((cfg_length+1).W)) }
+    val stateConfig = Reg(UInt((cfg_length+1).W))
     val shiftingMonitor = withClock(inv_sclk){ Reg(UInt(mon_length.W)) }
     val misoPosEdgeBuffer = withClock(io.sclk){ Reg(UInt(1.W)) }
 
@@ -38,10 +38,16 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     spiFirstCycle := asyncRegister.Q
     asyncRegister.clock := inv_sclk
     asyncRegister.set := io.cs.toBool
+
+    // masks applied for inserting MSB
+    val configMask = Cat(io.mosi,0.U(cfg_length.W))
+    val monitorMask = Cat(shiftingConfig(0),0.U((mon_length-1).W))
     
     // pre-shifted vectors for register assignment 
-    val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
-    val monitorRegShifted = (shiftingMonitor << 1) | shiftingConfig(cfg_length-1)
+    //val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
+    //val monitorRegShifted = (shiftingMonitor << 1) | shiftingConfig(cfg_length)
+    val nextShiftingConfig = configMask | (shiftingConfig >> 1)
+    val monitorRegShifted = monitorMask | (shiftingMonitor >> 1)
 
     // juggling with the monitor register input
     val monitorMuxControl = !io.cs.toBool && spiFirstCycle.toBool
@@ -51,7 +57,8 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     // SPI transfer happens during CS line being low
     when (!io.cs.toBool) {
       shiftingConfig := nextShiftingConfig
-      misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
+      //misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
+      misoPosEdgeBuffer := nextShiftingMonitor(0)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
         // first cycle of internal clock after CS rises again

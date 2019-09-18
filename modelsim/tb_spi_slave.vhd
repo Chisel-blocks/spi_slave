@@ -37,10 +37,11 @@ signal spi_word_out : std_logic_vector(size-1 downto 0) := (others => '0');
 procedure check_inout is
 begin
     assert spi_word_in_old = spi_word_out report 
-    " !!! WORDS DON'T MATCH !!!" & LF & 
+    " !!! WORDS DON'T MATCH !!! " & LF & 
     " Expected: " & to_string(spi_word_in_old) & LF & 
     " Got     : " & to_string(spi_word_out) 
     severity warning;
+    assert not(spi_word_in_old = spi_word_out) report "SPI transaction OK." severity note;
 end procedure;
 
 BEGIN
@@ -80,29 +81,28 @@ BEGIN
     WAIT FOR size*SClkPeriod;
 
     cs<= '1';
-    spi_word_in_old <= spi_word_in;
-    --monitor_register<="01010101";
-    config_value<="10000001";
     monitor_register<="11100011";
-    WAIT FOR SClkPeriod;
+    wait for 1 ps; -- dirty fix to update monitor register b4 updating old
+    spi_word_in_old <= spi_word_in;
+    config_value<="10000001";
+    WAIT FOR SClkPeriod - 1 ps;
 
     cs<= '0';
-    --mode_select<='1';
     wait for size*SClkPeriod;
 
     cs<='1';
     check_inout;
+    monitor_register<="11110000";
+    wait for 1 ps; -- dirty fix to update monitor register b4 updating old
     spi_word_in_old <= spi_word_in;
     config_value<="10011001";
-    monitor_register<="11110000";
-    WAIT FOR SClkPeriod;
+    WAIT FOR SClkPeriod - 1 ps;
 
     cs<= '0';
     WAIT FOR size*SClkPeriod;
 
     cs<='1';
     check_inout;
-    spi_word_in_old <= spi_word_in;
     WAIT FOR size*SClkPeriod;
 
     DONE<=TRUE;
