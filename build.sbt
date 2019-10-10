@@ -95,5 +95,5 @@ libraryDependencies  ++= Seq(
 //libraryDependencies += "edu.berkeley.cs" %% "eagle_serdes" % "0.0-SNAPSHOT"
 
 // Put your git-version controlled snapshots here
-//libraryDependencies += "edu.berkeley.cs" %% "hbwif" % gitSubmoduleHashSnapshotVersion("hbwif")
+libraryDependencies += "Chisel-blocks" %% "async_set_register" % gitSubmoduleHashSnapshotVersion("async_set_register")
 

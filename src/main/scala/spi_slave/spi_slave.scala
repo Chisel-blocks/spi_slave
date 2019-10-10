@@ -3,7 +3,8 @@ package spi_slave
 import chisel3._
 import chisel3.util._
 import chisel3.iotesters.{PeekPokeTester, Driver}
-import chisel3.experimental.{withClock, withReset, withClockAndReset}
+import chisel3.experimental.{withClock}
+import async_set_register._
 
 class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Module {
     val io = IO(new Bundle{
@@ -23,19 +24,30 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     // Here' my two cents
     //
     // SPI registers
-    val shiftingConfig = withClock(inv_sclk){ Reg(UInt(cfg_length.W)) }
-    val stateConfig = Reg(UInt(cfg_length.W))
+    val shiftingConfig = withClock(inv_sclk){ Reg(UInt((cfg_length+1).W)) }
+    val stateConfig = Reg(UInt((cfg_length+1).W))
     val shiftingMonitor = withClock(inv_sclk){ Reg(UInt(mon_length.W)) }
     val misoPosEdgeBuffer = withClock(io.sclk){ Reg(UInt(1.W)) }
 
     // TODO this guy has to have an asynchronous reset!
     // TODO ... and clocked with a falling edge of sclk
-    val spiFirstCycle = withReset(io.cs.toBool){ RegInit(1.U(1.W)) }
-    spiFirstCycle := 0.U
+    //
+    val spiFirstCycle = Wire(UInt(1.W))
+    val asyncRegister = Module(new async_set_register(n=1)).io
+    asyncRegister.D := 0.U
+    spiFirstCycle := asyncRegister.Q
+    asyncRegister.clock := inv_sclk
+    asyncRegister.set := io.cs.toBool
+
+    // masks applied for inserting MSB
+    val configMask = Cat(io.mosi,0.U(cfg_length.W))
+    val monitorMask = Cat(shiftingConfig(0),0.U((mon_length-1).W))
     
     // pre-shifted vectors for register assignment 
-    val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
-    val monitorRegShifted = (shiftingMonitor << 1) | shiftingConfig(cfg_length-1)
+    //val nextShiftingConfig = (shiftingConfig << 1) | io.mosi
+    //val monitorRegShifted = (shiftingMonitor << 1) | shiftingConfig(cfg_length)
+    val nextShiftingConfig = configMask | (shiftingConfig >> 1)
+    val monitorRegShifted = monitorMask | (shiftingMonitor >> 1)
 
     // juggling with the monitor register input
     val monitorMuxControl = !io.cs.toBool && spiFirstCycle.toBool
@@ -45,23 +57,76 @@ class spi_slave(val cfg_length : Int = 8, val mon_length : Int = 8) extends Modu
     // SPI transfer happens during CS line being low
     when (!io.cs.toBool) {
       shiftingConfig := nextShiftingConfig
-      misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
+      //misoPosEdgeBuffer := nextShiftingMonitor(mon_length-1)
+      misoPosEdgeBuffer := nextShiftingMonitor(0)
       io.miso := misoPosEdgeBuffer
     } .otherwise {
-      io.miso := 0.U
-    }
-
-    // first cycle of internal clock after CS rises again
-    when (risingEdge(io.cs.toBool)){
-      stateConfig := shiftingConfig
+        // first cycle of internal clock after CS rises again
+        when (risingEdge(io.cs.toBool)){
+          stateConfig := shiftingConfig
+        }
+        io.miso:=0.U(1.W)
     }
 
     // provide a snapshot of shifting Config register to the chip
-    io.config_out := stateConfig
+    io.config_out := stateConfig(cfg_length,1)
 }
 
+
+//This is the object to provide verilog
 object spi_slave extends App {
-    chisel3.Driver.execute(args, () => new spi_slave)
+    // Getopts parses the "Command line arguments for you"  
+    def getopts(options : Map[String,String], 
+        arguments: List[String]) : (Map[String,String], List[String]) = {
+        //This the help
+        val usage = """
+            |Usage: spi_slave.spi_slave [-<option>]
+            |
+            | Options
+            |     cfg_length       [Int]     : Number of bits in the config register. Default 8
+            |     mon_length       [Int]     : Number of bits in the monitor register. Default 8
+            |     h                          : This help 
+          """.stripMargin
+        val optsWithArg: List[String]=List(
+            "-cfg_length",
+            "-mon_length"
+        )
+        //Handling of flag-like options to be defined 
+        arguments match {
+            case "-h" :: tail => {
+                println(usage)
+                val (newopts, newargs) = getopts(options, tail)
+                sys.exit
+                (Map("h"->"") ++ newopts, newargs)
+            }
+            case option :: value :: tail if optsWithArg contains option => {
+               val (newopts, newargs) = getopts(
+                   options++Map(option.replace("-","") -> value), tail
+               )
+               (newopts, newargs)
+            }
+              case argument :: tail => {
+                 val (newopts, newargs) = getopts(options,tail)
+                 (newopts, argument.toString +: newargs)
+              }
+            case Nil => (options, arguments)
+        }
+    }
+     
+    // Default options
+    val defaultoptions : Map[String,String]=Map(
+        "cfg_length"->"8",
+        "mon_length"->"8"
+        ) 
+    // Parse the options
+    val (options,arguments)= getopts(defaultoptions,args.toList)
+  
+    chisel3.Driver.execute(arguments.toArray, () => 
+            new spi_slave(
+                cfg_length=options("cfg_length").toInt, 
+                mon_length=options("mon_length").toInt
+            )
+    )
 }
 
 class unit_tester(c: spi_slave) extends PeekPokeTester(c) {
