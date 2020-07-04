@@ -287,12 +287,12 @@ for signal in ${config_signals[@]}; do
         config_ptr=$((stop_ptr+1))
         config_ptr_relative=$((config_ptr_relative+step+1))
         #                           123456
-        sed -i "/.*new $module.*/a \      $module\.$signal\:\=spi_slave.config_out($stop_ptr,$start_ptr)" "$target_scala"
+        sed -i "/.*new $module.*/a \      $module\.$signal\:\=spi_slave.config_out($stop_ptr,$start_ptr)\.asTypeOf($module\.$signal\.cloneType)" "$target_scala"
         config_start+=("$start_ptr")
         config_stop+=("$stop_ptr")
     else
         #                           123456
-        sed -i "/.*new $module.*/a \      $module\.$signal\:\=spi_slave.config_out($config_ptr)" "$target_scala"
+        sed -i "/.*new $module.*/a \      $module\.$signal\:\=spi_slave.config_out($config_ptr)\.asTypeOf($module\.$signal\.cloneType)" "$target_scala"
         config_ptr=$((config_ptr+1))
         config_ptr_relative=$((config_ptr_relative+1))
         config_start+=("$config_ptr")
@@ -329,7 +329,6 @@ for signal in ${monitor_signals[@]}; do
         monitor_ptr=$((stop_ptr+1))
         monitor_ptr_relative=$((monitor_ptr_relative+step+1))
         #                           123456
-        #sed -i "/.*new $module.*/a \      spi_slave.monitor_in($stop_ptr,$start_ptr)\:\=$module\.$signal" "$target_scala"
         sed -i "/.*new $module.*/a \      assign_monitor($module\.$signal,$stop_ptr,$start_ptr)" "$target_scala"
         monitor_start+=("$start_ptr")
         monitor_stop+=("$stop_ptr")
@@ -337,7 +336,6 @@ for signal in ${monitor_signals[@]}; do
         monitor_start+=("$monitor_ptr")
         monitor_stop+=("$monitor_ptr")
         #                           123456
-        #sed -i "/.*new $module.*/a \      spi_slave.monitor_in($monitor_ptr)\:\=$module\.$signal" "$target_scala"
         sed -i "/.*new $module.*/a \      assign_monitor($module\.$signal,$stop_ptr,$start_ptr)" "$target_scala"
         monitor_ptr=$((monitor_ptr+1))
         monitor_ptr_relative=$((monitor_ptr_relative+1))
