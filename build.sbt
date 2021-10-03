@@ -8,7 +8,7 @@ name := "spi_slave"
 
 version := scala.sys.process.Process("git rev-parse --short HEAD").!!.mkString.replaceAll("\\s", "")+"-SNAPSHOT"
 
-scalaVersion := "2.11.11"
+scalaVersion := "2.12.10"
 
 // [TODO] what are these needed for? remove if obsolete
 def scalacOptionsVersion(scalaVersion: String): Seq[String] = {
@@ -46,7 +46,7 @@ def gitSubmoduleHashSnapshotVersion(submod: String): String = {
 
 
 // [TODO] what are these needed for? remove if obsolete
-crossScalaVersions := Seq("2.11.11", "2.12.3")
+crossScalaVersions := Seq("2.11.11", "2.12.10")
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
 
